@@ -1,3 +1,4 @@
+import pygame, math
 class Player:
     def __init__(self, name, health=100, position=(0, 0, 0)):
         self.name = name
