@@ -43,25 +43,17 @@ class GameEngine:
             if self.player:
                 if keys[pygame.K_w]:
                     # check if the player can move forward
-                    if self.game_map.is_position_valid(self.player.position[0] + 0.1 * math.cos(math.radians(self.player.position[2])),
-                                                       self.player.position[1] + 0.1 * math.sin(math.radians(self.player.position[2]))):
-                        self.player.move(0.1 * math.cos(math.radians(self.player.position[2])),
-                                     0.1 * math.sin(math.radians(self.player.position[2])))
+                    if self.game_map.is_position_valid(self.player.position[0] + 0.1 * math.cos(math.radians(self.player.position[2])), self.player.position[1] + 0.1 * math.sin(math.radians(self.player.position[2]))):
+                        self.player.move(0.1 * math.cos(math.radians(self.player.position[2])), 0.1 * math.sin(math.radians(self.player.position[2])))
                 if keys[pygame.K_s]:
-                    if self.game_map.is_position_valid(self.player.position[0] - 0.1 * math.cos(math.radians(self.player.position[2])),
-                                                       self.player.position[1] - 0.1 * math.sin(math.radians(self.player.position[2]))):
-                        self.player.move(-0.1 * math.cos(math.radians(self.player.position[2])),
-                                         -0.1 * math.sin(math.radians(self.player.position[2])))
+                    if self.game_map.is_position_valid(self.player.position[0] - 0.1 * math.cos(math.radians(self.player.position[2])), self.player.position[1] - 0.1 * math.sin(math.radians(self.player.position[2]))):
+                        self.player.move(-0.1 * math.cos(math.radians(self.player.position[2])), -0.1 * math.sin(math.radians(self.player.position[2])))
                 if keys[pygame.K_d]:
-                    if self.game_map.is_position_valid(self.player.position[0] - 0.05 * math.sin(math.radians(self.player.position[2])),
-                                                       self.player.position[1] + 0.05 * math.cos(math.radians(self.player.position[2]))):
-                        self.player.move(-0.05 * math.sin(math.radians(self.player.position[2])),
-                                         0.05 * math.cos(math.radians(self.player.position[2])))
+                    if self.game_map.is_position_valid(self.player.position[0] - 0.05 * math.sin(math.radians(self.player.position[2])), self.player.position[1] + 0.05 * math.cos(math.radians(self.player.position[2]))):
+                        self.player.move(-0.05 * math.sin(math.radians(self.player.position[2])), 0.05 * math.cos(math.radians(self.player.position[2])))
                 if keys[pygame.K_a]:
-                    if self.game_map.is_position_valid(self.player.position[0] + 0.05 * math.sin(math.radians(self.player.position[2])),
-                                                       self.player.position[1] - 0.05 * math.cos(math.radians(self.player.position[2]))):
-                        self.player.move(0.05 * math.sin(math.radians(self.player.position[2])),
-                                         -0.05 * math.cos(math.radians(self.player.position[2])))
+                    if self.game_map.is_position_valid(self.player.position[0] + 0.05 * math.sin(math.radians(self.player.position[2])), self.player.position[1] - 0.05 * math.cos(math.radians(self.player.position[2]))):
+                        self.player.move(0.05 * math.sin(math.radians(self.player.position[2])), -0.05 * math.cos(math.radians(self.player.position[2])))
             # Handle mouse movement for rotation
             if self.player:
                 rel_x, rel_y = pygame.mouse.get_rel()
@@ -84,10 +76,8 @@ class GameEngine:
                         if 0 <= target_x < map_length and 0 <= target_y < map_width:
                             if wall_data[target_y][target_x] == 1:  # Wall hit
                                 wall_height = max(1, int(600 / (depth * 0.1)))  # Simple perspective
-                                color = (255 - min(255, depth), 0, 0)  # Darker with distance
-                                pygame.draw.line(self.screen, color,
-                                                 (ray, 300 - wall_height // 2),
-                                                 (ray, 300 + wall_height // 2))
+                                color = (255 - min(255, depth), 255 - min(255, depth), 255 - min(255, depth))  # Darker with distance
+                                pygame.draw.line(self.screen, color, (ray, 300 - wall_height // 2), (ray, 300 + wall_height // 2))
                                 break
                 
                 
