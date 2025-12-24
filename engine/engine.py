@@ -2,7 +2,6 @@ import pygame, math
 from engine.map import GameMap
 from engine.player import Player
 
-mouse_sensitivity = 0.1
 
 class GameEngine:
     def __init__(self, title="Game Engine", width=800, height=600, fps=30):
@@ -14,6 +13,7 @@ class GameEngine:
         self.running = True
         self.player = None
         self.game_map = None
+        self.look_sensitivity = 0.1
         
         # Grab Mouse
         pygame.mouse.set_visible(False)
@@ -28,6 +28,39 @@ class GameEngine:
         self.player = Player(name=player_name, health=health, position=position)
         return True
     
+    def pause_menu(self):
+        pygame.mouse.set_visible(True)
+        pygame.event.set_grab(False)
+        paused = True
+        font = pygame.font.SysFont(None, 55)
+        pause_text = font.render('Game Paused. Press Esc to Resume.', True, (255, 255, 255))
+        while paused:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    paused = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        paused = False
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(pause_text, (100, 250))
+            # Draw a slider for look sensitivity adjustment
+            look_sensitivity_text = font.render('Look Sensitivity:', True, (255, 255, 255))
+            self.screen.blit(look_sensitivity_text, (150, 300))
+            pygame.draw.rect(self.screen, (100, 100, 100), (150, 350, 500, 20))
+            pygame.draw.rect(self.screen, (200, 200, 200), (150 + int(self.look_sensitivity * 500), 345, 10, 30))
+            # Handle mouse input for slider
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if pygame.mouse.get_pressed()[0]:
+                if 150 <= mouse_x <= 650 and 345 <= mouse_y <= 375:
+                    self.look_sensitivity = (mouse_x - 150) / 500.0
+
+
+            pygame.display.flip()
+            self.clock.tick(15)
+        pygame.mouse.set_visible(False)
+        pygame.event.set_grab(True)
+    
     def run(self):
         while self.running:
             print(self.player.position)
@@ -36,13 +69,12 @@ class GameEngine:
                     self.running = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        pygame.mouse.set_visible(True)
-                        pygame.event.set_grab(False)
+                        self.pause_menu()
             # Handle other events like player movement here
             keys = pygame.key.get_pressed()
             if self.player:
+                # Handle WASD movement
                 if keys[pygame.K_w]:
-                    # check if the player can move forward
                     if self.game_map.is_position_valid(self.player.position[0] + 0.1 * math.cos(math.radians(self.player.position[2])), self.player.position[1] + 0.1 * math.sin(math.radians(self.player.position[2]))):
                         self.player.move(0.1 * math.cos(math.radians(self.player.position[2])), 0.1 * math.sin(math.radians(self.player.position[2])))
                 if keys[pygame.K_s]:
@@ -54,10 +86,14 @@ class GameEngine:
                 if keys[pygame.K_a]:
                     if self.game_map.is_position_valid(self.player.position[0] + 0.05 * math.sin(math.radians(self.player.position[2])), self.player.position[1] - 0.05 * math.cos(math.radians(self.player.position[2]))):
                         self.player.move(0.05 * math.sin(math.radians(self.player.position[2])), -0.05 * math.cos(math.radians(self.player.position[2])))
-            # Handle mouse movement for rotation
-            if self.player:
+                # Handle rotation with arrow keys
+                if keys[pygame.K_LEFT]:
+                    self.player.rotate(self.look_sensitivity * -10)
+                if keys[pygame.K_RIGHT]:
+                    self.player.rotate(self.look_sensitivity * 10)
+                # Handle mouse movement for rotation
                 rel_x, rel_y = pygame.mouse.get_rel()
-                self.player.rotate(rel_x * mouse_sensitivity)
+                self.player.rotate(rel_x * -self.look_sensitivity)
 
             self.screen.fill((0, 0, 0))  # Clear screen with black
             # draw line for wall size based on distance away from player
