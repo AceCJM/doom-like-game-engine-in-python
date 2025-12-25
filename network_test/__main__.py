@@ -19,9 +19,11 @@ if __name__ == "__main__":
         try:
             while True:
                 message = input("Enter message to send (or 'exit' to quit): ")
+
                 if message.lower() == 'exit':
+                    client.disconnect()
                     break
-                client.send_data(message)
+                client.send_data({"type": "chat", "data": message})
         except KeyboardInterrupt:
             print("Shutting down...")
             client.disconnect()

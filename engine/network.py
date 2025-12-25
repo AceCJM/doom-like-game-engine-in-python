@@ -3,7 +3,7 @@
 # Client to connect to the server and communicate player movements and retreive other players' data
 import socket
 import threading
-import pickle
+import json
 
 class GameClient:
     def __init__(self, server_ip, server_port):
@@ -21,7 +21,7 @@ class GameClient:
             try:
                 data = self.client_socket.recv(1024)
                 if data:
-                    self.handle_server_message(pickle.loads(data))
+                    self.handle_server_message(json.loads(data))
             except Exception as e:
                 print(f"Error receiving server message: {e}")
                 self.running = False
@@ -33,11 +33,13 @@ class GameClient:
             self.disconnect()
         elif message.get("type") == "player_update":
             print(f"Player update received: {message}")
+        elif message.get("type") == "chat":
+            print(f"Chat message received: {message.get('data')}")
         print(f"Received message from server: {message}")
 
-    def send_data(self, player_data):
+    def send_data(self, player_data: dict):
         try:
-            self.client_socket.sendall(pickle.dumps(player_data))
+            self.client_socket.sendall(json.dumps(player_data).encode('utf-8'))
         except Exception as e:
             print(f"Error sending data: {e}")
 
@@ -79,7 +81,7 @@ class GameServer:
             try:
                 data = client_socket.recv(1024)
                 if data:
-                    player_data = pickle.loads(data)
+                    player_data = json.loads(data.decode('utf-8'))
                     self.broadcast_data(player_data)
             except Exception as e:
                 print(f"Client error: {e}")
@@ -89,7 +91,7 @@ class GameServer:
     def broadcast_data(self, player_data):
         for client in self.clients:
             try:
-                client.sendall(pickle.dumps(player_data))
+                client.sendall(json.dumps(player_data).encode('utf-8'))
             except Exception as e:
                 print(f"Error broadcasting to client: {e}")
 
