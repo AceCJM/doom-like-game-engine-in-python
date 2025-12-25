@@ -27,15 +27,14 @@ class GameClient:
                 self.running = False
 
     def handle_server_message(self, message):
-        print(type(message))
-        if message.get("type") == "shutdown":
+        if message['type'] == "shutdown":
             print("Server is shutting down.")
             self.running = False
             self.disconnect()
-        elif message.get("type") == "player_update":
+        elif message['type'] == "player_update":
             print(f"Player update received: {message}")
-        elif message.get("type") == "chat":
-            print(f"Chat message received: {message.get('data')}")
+        elif message['type'] == "chat":
+            print(f"Chat message received: {message['data']}")
         print(f"Received message from server: {message}")
 
     def send_data(self, player_data: dict):
