@@ -18,7 +18,7 @@ class GameMap:
         return False
 
     def get_starting_position(self):
-        return self.map_data.get("details", {}).get("starting_position", (0, 0))
+        return self.map_data['details']['starting_position']
 
     def get_map(self):
         return self.map_data

@@ -1,8 +1,11 @@
 from engine import GameServer, GameClient
+from engine import GameMap
 
 def start_server():
     server = GameServer(host='0.0.0.0', port=5555)
-    server.start()
+    game_map = GameMap()
+    game_map.load_map("network_test/maps/default_map.json")
+    server.start(game_map)
     return server
 def start_client():
     client = GameClient(server_ip='10.10.21.51', server_port=5555)
@@ -22,7 +25,7 @@ if __name__ == "__main__":
 
                 if message.lower() == 'exit':
                     client.disconnect()
-                    break
+                    exit()
                 client.send_data({"type": "chat", "data": message})
         except KeyboardInterrupt:
             print("Shutting down...")

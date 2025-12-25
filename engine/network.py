@@ -26,28 +26,41 @@ class GameClient:
                 print(f"Error receiving server message: {e}")
                 self.running = False
 
-    def handle_server_message(self, message):
-        if message['type'] == "shutdown":
+    def handle_server_message(self, data):
+        if data['type'] == "shutdown":
             print("Server is shutting down.")
             self.running = False
             self.disconnect()
-        elif message['type'] == "player_update":
-            print(f"Player update received: {message}")
-        elif message['type'] == "chat":
-            print(f"Chat message received: {message['data']}")
-        print(f"Received message from server: {message}")
+        elif data['type'] == "player_update":
+            print(f"Player update received: {data}")
+        elif data['type'] == "chat":
+            print(f"Chat message received: {data['data']}")
+        print(f"Received message from server: {data}")
 
-    def send_data(self, player_data: dict):
+    def send_data(self, data: dict):
         try:
-            self.client_socket.sendall(json.dumps(player_data).encode('utf-8'))
+            self.client_socket.sendall(json.dumps(data).encode('utf-8'))
         except Exception as e:
             print(f"Error sending data: {e}")
 
+    def get_map(self):
+        try:
+            self.client_socket.sendall(json.dumps({"type": "get_map"}).encode('utf-8'))
+            data = self.client_socket.recv(4096)
+            map_data = json.loads(data.decode('utf-8'))
+            if map_data['type'] == "map_data":
+                return map_data['data']
+            return None
+        except Exception as e:
+            print(f"Error getting map data: {e}")
+            return None
+
     def disconnect(self):
         self.running = False
+        self.send_data({"type": "socket", "data": "close"})
         self.client_socket.close()
         print("Disconnected from server")
-
+        self.client_socket = None
 class GameServer:
     def __init__(self, host='', port=5555):
         self.host = host
@@ -56,8 +69,10 @@ class GameServer:
         self.server_socket.settimeout(1.0)
         self.clients = []
         self.running = True
+        self.map = None  # Placeholder for GameMap instance
 
-    def start(self):
+    def start(self, map_data):
+        self.map = map_data
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
         print(f"Server started on {self.host}:{self.port}")
@@ -81,19 +96,38 @@ class GameServer:
             try:
                 data = client_socket.recv(1024)
                 if data:
-                    player_data = json.loads(data.decode('utf-8'))
-                    self.broadcast_data(player_data)
+                    data = json.loads(data.decode('utf-8'))
+                    if data['type'] == "socket" and data['data'] == "close":
+                        self.handle_client_disconnect(client_socket)
+                        return -1
+                    elif data['type'] == "get_map":
+                        self.get_map(client_socket)
+                    else:
+                        self.broadcast_data(data)
             except Exception as e:
                 print(f"Client error: {e}")
                 self.handle_client_disconnect(client_socket)
                 return -1
 
-    def broadcast_data(self, player_data):
+    def get_map(self, client_socket):
+        if self.map:
+            try:
+                self.send_data(client_socket, {"type": "map_data", "data": self.map.get_map()})
+            except Exception as e:
+                print(f"Error sending map data: {e}")
+
+    def broadcast_data(self, data):
         for client in self.clients:
             try:
-                client.sendall(json.dumps(player_data).encode('utf-8'))
+                client.sendall(json.dumps(data).encode('utf-8'))
             except Exception as e:
                 print(f"Error broadcasting to client: {e}")
+
+    def send_data(self, client_socket, data):
+        try:
+            client_socket.sendall(json.dumps(data).encode('utf-8'))
+        except Exception as e:
+            print(f"Error sending data to client: {e}")
 
     def handle_client_disconnect(self, client_socket):
         if client_socket in self.clients:

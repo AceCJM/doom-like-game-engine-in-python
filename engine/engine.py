@@ -1,6 +1,7 @@
-import pygame, math
+import pygame, math, pygame_textinput
 from engine.map import GameMap
 from engine.player import Player
+from engine.network import GameServer, GameClient
 
 
 class GameEngine:
@@ -14,6 +15,7 @@ class GameEngine:
         self.player = None
         self.game_map = None
         self.look_sensitivity = 0.1
+        self.game_type = ""
         
         # Grab Mouse
         pygame.mouse.set_visible(False)
@@ -27,7 +29,60 @@ class GameEngine:
     def spawn_player(self, player_name, health=100, position=(0, 0, 0)):
         self.player = Player(name=player_name, health=health, position=position)
         return True
-    
+
+    def main_menu(self):
+        pygame.mouse.set_visible(True)
+        pygame.event.set_grab(False)
+        menu_running = True
+        font = pygame.font.SysFont(None, 75)
+        title_text = font.render('Main Menu', True, (255, 255, 255))
+        multiplayer_text = font.render('Multiplayer', True, (255, 255, 255))
+        singleplayer_text = font.render('Single Player', True, (255, 255, 255))
+        while menu_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    menu_running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        menu_running = False  # Start Single Player
+                        self.game_type = "sp"
+                    if event.key == pygame.K_2:
+                        menu_running = False  # Start Multiplayer
+                        self.game_type = "mp"
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(title_text, (300, 100))
+            self.screen.blit(singleplayer_text, (250, 250))
+            self.screen.blit(multiplayer_text, (250, 350))
+            pygame.display.flip()
+            self.clock.tick(15)
+
+    def multiplayer_menu(self):
+        pygame.mouse.set_visible(True)
+        pygame.event.set_grab(False)
+        menu_running = True
+        font = pygame.font.SysFont(None, 55)
+        instruction_text = font.render('Press Enter to Connect to Server', True, (255, 255, 255))
+        ip_input = pygame_textinput.TextInputVisualizer()
+        while menu_running:
+            events = pygame.event.get()
+            for event in events:
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    menu_running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        menu_running = False  # Connect to server
+                        self.multi_player_run(ip_input.value)
+            ip_input.update(events)
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(instruction_text, (200, 300))
+            self.screen.blit(ip_input.surface, (200, 350))
+            pygame.display.flip()
+            self.clock.tick(15)
+        pygame.mouse.set_visible(False)
+        pygame.event.set_grab(True)
+
     def pause_menu(self):
         pygame.mouse.set_visible(True)
         pygame.event.set_grab(False)
@@ -54,14 +109,15 @@ class GameEngine:
             if pygame.mouse.get_pressed()[0]:
                 if 150 <= mouse_x <= 650 and 345 <= mouse_y <= 375:
                     self.look_sensitivity = (mouse_x - 150) / 500.0
-
-
             pygame.display.flip()
             self.clock.tick(15)
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
-    
-    def run(self):
+
+    def single_player_run(self, map_name="example_game/maps/default_map.json"):
+        self.game_map = GameMap()
+        self.game_map.load_map(map_name)
+        self.spawn_player("Player1", position=self.game_map.get_starting_position())
         while self.running:
             print(self.player.position)
             for event in pygame.event.get():
@@ -119,5 +175,74 @@ class GameEngine:
                 
             pygame.display.flip()  # Update the display
             self.clock.tick(self.fps)  # Maintain specified FPS
+        pygame.quit()
 
+    def multi_player_run(self, ip_address, port=5555):
+        self.client_instance = GameClient(server_ip=ip_address, server_port=port)
+        self.client_instance.connect()
+        self.game_map = GameMap()
+        self.game_map.map_data = self.client_instance.get_map()
+        self.spawn_player("Player1", position=self.game_map.get_starting_position())
+        while self.running:
+            print(self.player.position)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.pause_menu()
+            # Handle other events like player movement here
+            keys = pygame.key.get_pressed()
+            if self.player:
+                # Handle WASD movement
+                if keys[pygame.K_w]:
+                    if self.game_map.is_position_valid(self.player.position[0] + 0.1 * math.cos(math.radians(self.player.position[2])), self.player.position[1] + 0.1 * math.sin(math.radians(self.player.position[2]))):
+                        self.player.move(0.1 * math.cos(math.radians(self.player.position[2])), 0.1 * math.sin(math.radians(self.player.position[2])))
+                if keys[pygame.K_s]:
+                    if self.game_map.is_position_valid(self.player.position[0] - 0.1 * math.cos(math.radians(self.player.position[2])), self.player.position[1] - 0.1 * math.sin(math.radians(self.player.position[2]))):
+                        self.player.move(-0.1 * math.cos(math.radians(self.player.position[2])), -0.1 * math.sin(math.radians(self.player.position[2])))
+                if keys[pygame.K_d]:
+                    if self.game_map.is_position_valid(self.player.position[0] - 0.05 * math.sin(math.radians(self.player.position[2])), self.player.position[1] + 0.05 * math.cos(math.radians(self.player.position[2]))):
+                        self.player.move(-0.05 * math.sin(math.radians(self.player.position[2])), 0.05 * math.cos(math.radians(self.player.position[2])))
+                if keys[pygame.K_a]:
+                    if self.game_map.is_position_valid(self.player.position[0] + 0.05 * math.sin(math.radians(self.player.position[2])), self.player.position[1] - 0.05 * math.cos(math.radians(self.player.position[2]))):
+                        self.player.move(0.05 * math.sin(math.radians(self.player.position[2])), -0.05 * math.cos(math.radians(self.player.position[2])))
+                # Handle rotation with arrow keys
+                if keys[pygame.K_LEFT]:
+                    self.player.rotate(self.look_sensitivity * -10)
+                if keys[pygame.K_RIGHT]:
+                    self.player.rotate(self.look_sensitivity * 10)
+                # Handle mouse movement for rotation
+                rel_x, rel_y = pygame.mouse.get_rel()
+                self.player.rotate(rel_x * -self.look_sensitivity)
+
+            self.screen.fill((0, 0, 0))  # Clear screen with black
+            # draw line for wall size based on distance away from player
+            map_data = self.game_map.get_map()
+            if map_data and self.player:
+                player_x, player_y, player_r = self.player.position
+                wall_data = map_data.get("data", {}).get("walls", [])
+                map_length = map_data.get("data", {}).get("map_size", {}).get("length", 0)
+                map_width = map_data.get("data", {}).get("map_size", {}).get("width", 0)
+                for ray in range(0, 800, 2):  # Cast rays for each vertical line
+                    ray_angle = (player_r - 30) + (ray / 800) * 60  # FOV of 60 degrees
+                    ray_angle_rad = ray_angle * (3.14159 / 180)
+                    for depth in range(1, 800):
+                        target_x = int(player_x + depth * 0.1 * math.cos(ray_angle_rad))
+                        target_y = int(player_y + depth * 0.1 * math.sin(ray_angle_rad))
+                        if 0 <= target_x < map_length and 0 <= target_y < map_width:
+                            if wall_data[target_y][target_x] == 1:  # Wall hit
+                                wall_height = max(1, int(600 / (depth * 0.1)))  # Simple perspective
+                                color = (255 - min(255, depth), 255 - min(255, depth), 255 - min(255, depth))  # Darker with distance
+                                pygame.draw.line(self.screen, color, (ray, 300 - wall_height // 2), (ray, 300 + wall_height // 2))
+                                break
+    
+    def run(self):
+        self.main_menu()
+        if self.game_type == "mp":
+            # self.multiplayer_menu()
+            # For simplicity, directly start multiplayer with localhost
+            self.multi_player_run("localhost", 5555)
+        elif self.game_type == "sp":
+            self.single_player_run()
         pygame.quit()
