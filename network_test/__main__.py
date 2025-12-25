@@ -9,15 +9,19 @@ def start_client():
     client.connect()
     return client
 
-if __name__ == "__main__":
-    client = start_client()
-    # Keep the main thread alive to maintain server and client
-    try:
-        while True:
-            message = input("Enter message to send (or 'exit' to quit): ")
-            if message.lower() == 'exit':
-                break
-            client.send_data(message)
-    except KeyboardInterrupt:
-        print("Shutting down...")
-        client.disconnect()
+if __name__ == "__main__": 
+    from sys import argv
+    if len(argv) > 1 and argv[1] == '--server':
+        server = start_server()
+    else:
+        client = start_client()
+        # Keep the main thread alive to maintain server and client
+        try:
+            while True:
+                message = input("Enter message to send (or 'exit' to quit): ")
+                if message.lower() == 'exit':
+                    break
+                client.send_data(message)
+        except KeyboardInterrupt:
+            print("Shutting down...")
+            client.disconnect()
