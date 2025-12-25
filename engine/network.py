@@ -28,13 +28,13 @@ class GameClient:
 
     def handle_server_message(self, message):
         # Handle incoming messages from the server
-        print(f"Received message from server: {message}")
+        print(f"Received message from server: {message}")    
 
-    def send_player_data(self, player_data):
+    def send_data(self, player_data):
         try:
             self.client_socket.sendall(pickle.dumps(player_data))
         except Exception as e:
-            print(f"Error sending player data: {e}")
+            print(f"Error sending data: {e}")
 
     def disconnect(self):
         self.running = False

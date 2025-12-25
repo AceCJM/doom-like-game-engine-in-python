@@ -5,9 +5,19 @@ def start_server():
     server.start()
     return server
 def start_client():
-    client = GameClient(server_ip='localhost', server_port=5555)
+    client = GameClient(server_ip='10.10.21.51', server_port=5555)
     client.connect()
     return client
 
 if __name__ == "__main__":
-    server = start_server()
+    client = start_client()
+    # Keep the main thread alive to maintain server and client
+    try:
+        while True:
+            message = input("Enter message to send (or 'exit' to quit): ")
+            if message.lower() == 'exit':
+                break
+            client.send_data(message)
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        client.disconnect()
