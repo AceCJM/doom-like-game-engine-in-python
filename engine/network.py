@@ -27,8 +27,13 @@ class GameClient:
                 self.running = False
 
     def handle_server_message(self, message):
-        # Handle incoming messages from the server
-        print(f"Received message from server: {message}")    
+        if message.get("type") == "shutdown":
+            print("Server is shutting down.")
+            self.running = False
+            self.disconnect()
+        elif message.get("type") == "player_update":
+            print(f"Player update received: {message}")
+        print(f"Received message from server: {message}")
 
     def send_data(self, player_data):
         try:
@@ -46,6 +51,7 @@ class GameServer:
         self.host = host
         self.port = port
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.settimeout(1.0)
         self.clients = []
         self.running = True
 
@@ -58,10 +64,15 @@ class GameServer:
 
     def accept_clients(self):
         while self.running:
-            client_socket, addr = self.server_socket.accept()
-            print(f"Client connected from {addr}")
-            self.clients.append(client_socket)
-            threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+            try:
+                client_socket, addr = self.server_socket.accept()
+                print(f"Client connected from {addr}")
+                self.clients.append(client_socket)
+                threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+            except socket.timeout:
+                continue
+            except OSError:
+                break
 
     def handle_client(self, client_socket):
         while self.running:
@@ -101,4 +112,6 @@ class GameServer:
         self.server_socket.close()
         for client in self.clients:
             client.close()
+        self.server_socket.close()
         print("Server stopped")
+        exit(0)
