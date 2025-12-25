@@ -1,82 +1,91 @@
-class Server:
-    def __init__(self, host='0.0.0.0', port=5555):
-        import socket
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((host, port))
-        self.server.listen(5)
-        print(f"Server started on {host}:{port}")
+# Networking code for the game engine
+# Server to handle multiplayer connections and data exchange
+# Client to connect to the server and communicate player movements and retreive other players' data
+import socket
+import threading
+import pickle
+
+class GameClient:
+    def __init__(self, server_ip, server_port):
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.running = True
+
+    def connect(self):
+        self.client_socket.connect((self.server_ip, self.server_port))
+        threading.Thread(target=self.listen_for_server_messages).start()
+
+    def listen_for_server_messages(self):
+        while self.running:
+            try:
+                data = self.client_socket.recv(1024)
+                if data:
+                    self.handle_server_message(pickle.loads(data))
+            except Exception as e:
+                print(f"Error receiving server message: {e}")
+                self.running = False
+
+    def handle_server_message(self, message):
+        # Handle incoming messages from the server
+        print(f"Received message from server: {message}")
+
+    def send_player_data(self, player_data):
+        try:
+            self.client_socket.sendall(pickle.dumps(player_data))
+        except Exception as e:
+            print(f"Error sending player data: {e}")
+
+    def disconnect(self):
+        self.running = False
+        self.client_socket.close()
+        print("Disconnected from server")
+
+class GameServer:
+    def __init__(self, host='', port=5555):
+        self.host = host
+        self.port = port
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clients = []
-    
+        self.running = True
+
+    def start(self):
+        self.server_socket.bind((self.host, self.port))
+        self.server_socket.listen(5)
+        print(f"Server started on {self.host}:{self.port}")
+        threading.Thread(target=self.accept_clients).start()
+
     def accept_clients(self):
-        import threading
-        def handle_client(client_socket):
-            while True:
-                try:
-                    message = client_socket.recv(1024).decode('utf-8')
-                    if message:
-                        print(f"Received: {message}")
-                        self.broadcast(message, client_socket)
-                    else:
-                        break
-                except:
-                    break
-            client_socket.close()
-            self.clients.remove(client_socket)
-        
-        while True:
-            client_socket, addr = self.server.accept()
-            print(f"Accepted connection from {addr}")
+        while self.running:
+            client_socket, addr = self.server_socket.accept()
+            print(f"Client connected from {addr}")
             self.clients.append(client_socket)
-            client_handler = threading.Thread(target=handle_client, args=(client_socket,))
-            client_handler.start()
-    
-    def broadcast(self, message, sender_socket):
+            threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+
+    def handle_client(self, client_socket):
+        while self.running:
+            try:
+                data = client_socket.recv(1024)
+                if data:
+                    player_data = pickle.loads(data)
+                    self.broadcast_player_data(player_data, client_socket)
+            except Exception as e:
+                print(f"Error handling client: {e}")
+                self.clients.remove(client_socket)
+                client_socket.close()
+                break
+
+    def broadcast_player_data(self, player_data, sender_socket):
         for client in self.clients:
             if client != sender_socket:
                 try:
-                    client.send(message.encode('utf-8'))
-                except:
-                    client.close()
-                    self.clients.remove(client)
-class Client:
-    def __init__(self, server_ip='127.0.0.1', server_port=5555):
-        import socket
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((server_ip, server_port))
-        print(f"Connected to server at {server_ip}:{server_port}")
-    
-    def send_message(self, message):
-        self.client.send(message.encode('utf-8'))
-    
-    def receive_messages(self):
-        import threading
-        def listen():
-            while True:
-                try:
-                    message = self.client.recv(1024).decode('utf-8')
-                    if message:
-                        print(f"Received: {message}")
-                    else:
-                        break
-                except:
-                    break
-            self.client.close()
-        
-        listener_thread = threading.Thread(target=listen)
-        listener_thread.start()
+                    client.sendall(pickle.dumps(player_data))
+                except Exception as e:
+                    print(f"Error broadcasting to client: {e}")
 
-    # Game Engine methods
-    def send_player_position(self, position):
-        message = f"POSITION:{position[0]},{position[1]},{position[2]}"
-        self.send_message(message)
-    
-    def receive_player_positions(self):
-        # This method would parse incoming messages for player positions
-        def parse_position_message(message):
-            if message.startswith("POSITION:"):
-                _, coords = message.split(":", 1)
-                x, y, z = map(float, coords.split(","))
-                return (x, y, z)
-            return None
-
-        self.receive_messages()
+    def stop(self):
+        self.running = False
+        self.server_socket.close()
+        for client in self.clients:
+            client.close()
+        print("Server stopped")

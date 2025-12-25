@@ -1,14 +1,22 @@
-from engine import Server, Client
-import threading
+from engine import GameServer, GameClient
 
-# Start the server in a separate thread
 def start_server():
-    server = Server(host='127.0.0.1', port=5555)
-    server.accept_clients()
+    server = GameServer(host='localhost', port=5555)
+    server.start()
+    return server
+def start_client():
+    client = GameClient(server_ip='localhost', server_port=5555)
+    client.connect()
+    return client
 
-server_thread = threading.Thread(target=start_server)
-server_thread.start()
-
-# Create a client and connect to the server
-client = Client(server_ip='127.0.0.1', server_port=5555)
-client.send("Hello, Server!")
+if __name__ == "__main__":
+    server = start_server()
+    client = start_client()
+    # Keep the main thread alive to maintain server and client
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        client.disconnect()
+        server.stop()
