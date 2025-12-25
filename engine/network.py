@@ -27,6 +27,7 @@ class GameClient:
                 self.running = False
 
     def handle_server_message(self, message):
+        print(type(message))
         if message.get("type") == "shutdown":
             print("Server is shutting down.")
             self.running = False
