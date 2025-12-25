@@ -54,6 +54,7 @@ class GameServer:
         self.server_socket.listen(5)
         print(f"Server started on {self.host}:{self.port}")
         threading.Thread(target=self.accept_clients).start()
+        threading.Thread(target=self.console).start()
 
     def accept_clients(self):
         while self.running:
@@ -68,20 +69,32 @@ class GameServer:
                 data = client_socket.recv(1024)
                 if data:
                     player_data = pickle.loads(data)
-                    self.broadcast_player_data(player_data, client_socket)
+                    self.broadcast_data(player_data)
             except Exception as e:
-                print(f"Error handling client: {e}")
-                self.clients.remove(client_socket)
-                client_socket.close()
-                break
+                print(f"Client error: {e}")
+                self.handle_client_disconnect(client_socket)
+                return -1
 
-    def broadcast_player_data(self, player_data, sender_socket):
+    def broadcast_data(self, player_data):
         for client in self.clients:
-            if client != sender_socket:
-                try:
-                    client.sendall(pickle.dumps(player_data))
-                except Exception as e:
-                    print(f"Error broadcasting to client: {e}")
+            try:
+                client.sendall(pickle.dumps(player_data))
+            except Exception as e:
+                print(f"Error broadcasting to client: {e}")
+
+    def handle_client_disconnect(self, client_socket):
+        if client_socket in self.clients:
+            self.clients.remove(client_socket)
+            client_socket.close()
+            print("Client disconnected")
+
+    def console(self):
+        while self.running:
+            command = input("Server Command> ")
+            if command.lower() == "stop":
+                self.broadcast_data({"type": "shutdown"})
+                self.stop()
+                self.running = False
 
     def stop(self):
         self.running = False
