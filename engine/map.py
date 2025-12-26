@@ -8,6 +8,8 @@ class GameMap:
             self.map_data = load(f)
         return True
     
+    def retrieve_map_data(self, map_data):
+        self.map_data = map_data
     def is_position_valid(self, x, y):
         map_width = self.map_data['data']['map_size']['width']
         map_length = self.map_data['data']['map_size']['length']

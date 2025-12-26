@@ -4,16 +4,19 @@
 import socket
 import threading
 import json
+import struct
 
 class GameClient:
     def __init__(self, server_ip, server_port):
         self.server_ip = server_ip
         self.server_port = server_port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.otherplayers = {}  # Store other players' data
         self.running = True
 
     def connect(self):
         self.client_socket.connect((self.server_ip, self.server_port))
+        self.player_id = self.client_socket.getsockname()
         threading.Thread(target=self.listen_for_server_messages).start()
 
     def listen_for_server_messages(self):
@@ -27,12 +30,15 @@ class GameClient:
                 self.running = False
 
     def handle_server_message(self, data):
+        print(f"Handling server message: {data}")
         if data['type'] == "shutdown":
             print("Server is shutting down.")
             self.running = False
             self.disconnect()
         elif data['type'] == "player_update":
-            print(f"Player update received: {data}")
+            print(f"Player update received: {data['data']}")
+            player_id = data['data']['player_id']
+            self.otherplayers[player_id] = data['data']
         elif data['type'] == "chat":
             print(f"Chat message received: {data['data']}")
         print(f"Received message from server: {data}")
@@ -95,6 +101,7 @@ class GameServer:
         while self.running:
             try:
                 data = client_socket.recv(1024)
+                print(f"Received data from client: {data}")
                 if data:
                     data = json.loads(data.decode('utf-8'))
                     if data['type'] == "socket" and data['data'] == "close":
