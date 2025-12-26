@@ -100,17 +100,26 @@ class GameServer:
     def handle_client(self, client_socket):
         while self.running:
             try:
-                data = client_socket.recv(1024)
-                print(f"Received data from client: {data}")
-                if data:
-                    data = json.loads(data.decode('utf-8'))
-                    if data['type'] == "socket" and data['data'] == "close":
+                length_data = client_socket.recv(4)
+                if not length_data:
+                    break
+                length = struct.unpack('I', length_data)[0]
+                data = b''
+                while len(data) < length:
+                    chunk = client_socket.recv(min(1024, length - len(data)))
+                    if not chunk:
+                        break
+                    data += chunk
+                if len(data) == length:
+                    message = json.loads(data.decode('utf-8'))
+                    print(f"Received data from client: {message}")
+                    if message['type'] == "socket" and message['data'] == "close":
                         self.handle_client_disconnect(client_socket)
                         return -1
-                    elif data['type'] == "get_map":
+                    elif message['type'] == "get_map":
                         self.get_map(client_socket)
                     else:
-                        self.broadcast_data(data)
+                        self.broadcast_data(message, client_socket)
             except Exception as e:
                 print(f"Client error: {e}")
                 self.handle_client_disconnect(client_socket)
@@ -123,16 +132,23 @@ class GameServer:
             except Exception as e:
                 print(f"Error sending map data: {e}")
 
-    def broadcast_data(self, data):
+    def broadcast_data(self, data, exclude=None):
+        json_data = json.dumps(data).encode('utf-8')
+        length = struct.pack('I', len(json_data))
+        message = length + json_data
         for client in self.clients:
-            try:
-                client.sendall(json.dumps(data).encode('utf-8'))
-            except Exception as e:
-                print(f"Error broadcasting to client: {e}")
+            if client != exclude:
+                try:
+                    client.sendall(message)
+                except Exception as e:
+                    print(f"Error broadcasting to client: {e}")
 
     def send_data(self, client_socket, data):
+        json_data = json.dumps(data).encode('utf-8')
+        length = struct.pack('I', len(json_data))
+        message = length + json_data
         try:
-            client_socket.sendall(json.dumps(data).encode('utf-8'))
+            client_socket.sendall(message)
         except Exception as e:
             print(f"Error sending data to client: {e}")
 
