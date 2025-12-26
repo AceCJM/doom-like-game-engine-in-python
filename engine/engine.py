@@ -228,6 +228,7 @@ class GameEngine:
                         if self.hosted:
                             self.server_instance.running = False
                             self.server_instance.stop()
+                        exit(0)
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             self.pause_menu()
@@ -278,14 +279,28 @@ class GameEngine:
                                     break
                 # Send player position to server
                 self.client_instance.send_data({"type": "player_update", "data": {"player_id": self.client_instance.player_id, "position": self.player.position}})
-                # Render other players based on data given to the client instance
+                # Render other players in 3D space using raycasting
                 for other_id, other_data in self.client_instance.otherplayers.items():
-                    if other_id != self.client_instance.player_id:
+                    if other_id != tuple(self.client_instance.player_id):
                         other_pos = other_data['position']
-                        # Simple representation of other players as rectangles
-                        rect_x = 400 + (other_pos[0] - player_x) * 50
-                        rect_y = 300 + (other_pos[1] - player_y) * 50
-                        pygame.draw.rect(self.screen, (0, 255, 0), (rect_x - 10, rect_y - 10, 20, 20))
+                        other_x, other_y, _ = other_pos
+                        dx = other_x - player_x
+                        dy = other_y - player_y
+                        distance = math.sqrt(dx**2 + dy**2)
+                        if distance > 0:
+                            angle = math.atan2(dy, dx) - math.radians(player_r)
+                            # Normalize angle to -pi to pi
+                            while angle > math.pi:
+                                angle -= 2 * math.pi
+                            while angle < -math.pi:
+                                angle += 2 * math.pi
+                            # Check if within FOV (-30 to 30 degrees)
+                            fov_rad = math.radians(30)
+                            if -fov_rad < angle < fov_rad:
+                                screen_x = int(400 + (angle / fov_rad) * 400)
+                                player_height = max(1, int(600 / distance))
+                                # Draw as a vertical green line
+                                pygame.draw.line(self.screen, (0, 255, 0), (screen_x, 300 - player_height // 2), (screen_x, 300 + player_height // 2))
                 pygame.display.flip()  # Update the display
                 self.clock.tick(self.fps)  # Maintain specified FPS
         except Exception as e:
