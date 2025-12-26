@@ -13,6 +13,7 @@ class GameClient:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.otherplayers = {}  # Store other players' data
         self.running = True
+        self.map_response = None
 
     def connect(self):
         self.client_socket.connect((self.server_ip, self.server_port))
@@ -39,6 +40,8 @@ class GameClient:
             print(f"Player update received: {data['data']}")
             player_id = data['data']['player_id']
             self.otherplayers[player_id] = data['data']
+        elif data['type'] == "map_data":
+            self.map_response = data['data']
         elif data['type'] == "chat":
             print(f"Chat message received: {data['data']}")
         print(f"Received message from server: {data}")
@@ -51,12 +54,11 @@ class GameClient:
 
     def get_map(self):
         try:
-            self.client_socket.sendall(json.dumps({"type": "get_map"}).encode('utf-8'))
-            data = self.client_socket.recv(4096)
-            map_data = json.loads(data.decode('utf-8'))
-            if map_data['type'] == "map_data":
-                return map_data['data']
-            return None
+            self.send_data({"type": "get_map"})
+            while self.map_response is None:
+                import time
+                time.sleep(0.01)
+            return self.map_response
         except Exception as e:
             print(f"Error getting map data: {e}")
             return None
