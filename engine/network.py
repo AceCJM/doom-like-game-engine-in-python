@@ -48,7 +48,7 @@ class GameClient:
             self.disconnect()
         elif data['type'] == "player_update":
             print(f"Player update received: {data['data']}")
-            player_id = data['data']['player_id']
+            player_id = tuple(data['data']['player_id'])
             self.otherplayers[player_id] = data['data']
         elif data['type'] == "map_data":
             self.map_response = data['data']
