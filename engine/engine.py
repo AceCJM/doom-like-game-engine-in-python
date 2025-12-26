@@ -154,7 +154,6 @@ class GameEngine:
         self.game_map.load_map(map_name)
         self.spawn_player("Player1", position=self.game_map.get_starting_position())
         while self.running:
-            print(self.player.position)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -211,7 +210,8 @@ class GameEngine:
         pygame.quit()
 
     def multi_player_run(self, ip_address, port=5555):
-        
+        if not ip_address:
+            ip_address = "localhost"
         self.client_instance = GameClient(server_ip=ip_address, server_port=port)
         self.client_instance.connect()
         try:
