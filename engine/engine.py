@@ -221,7 +221,6 @@ class GameEngine:
             self.game_map.retrieve_map_data(map_data)
             self.spawn_player("Player1", position=self.game_map.get_starting_position())
             while self.running:
-                print(self.player.position)
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         self.running = False
@@ -280,12 +279,13 @@ class GameEngine:
                 # Send player position to server
                 self.client_instance.send_data({"type": "player_update", "data": {"player_id": self.client_instance.player_id, "position": self.player.position}})
                 # Render other players based on data given to the client instance
-                for other_player in self.client_instance.otherplayers.values():
-                    # Simple representation: draw a rectangle at other player's position
-                    other_x, other_y, _ = other_player['position']
-                    screen_x = int((other_x - self.player.position[0]) * 50 + 400)  # Scale and center
-                    screen_y = int((other_y - self.player.position[1]) * 50 + 300)
-                    pygame.draw.rect(self.screen, (0, 255, 0), (screen_x - 5, screen_y - 5, 10, 10))
+                for other_id, other_data in self.client_instance.otherplayers.items():
+                    if other_id != self.client_instance.player_id:
+                        other_pos = other_data['position']
+                        # Simple representation of other players as rectangles
+                        rect_x = 400 + (other_pos[0] - player_x) * 50
+                        rect_y = 300 + (other_pos[1] - player_y) * 50
+                        pygame.draw.rect(self.screen, (0, 255, 0), (rect_x - 10, rect_y - 10, 20, 20))
                 pygame.display.flip()  # Update the display
                 self.clock.tick(self.fps)  # Maintain specified FPS
         except Exception as e:

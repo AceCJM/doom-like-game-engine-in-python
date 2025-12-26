@@ -41,20 +41,17 @@ class GameClient:
                 self.running = False
 
     def handle_server_message(self, data):
-        print(f"Handling server message: {data}")
         if data['type'] == "shutdown":
             print("Server is shutting down.")
             self.running = False
             self.disconnect()
         elif data['type'] == "player_update":
-            print(f"Player update received: {data['data']}")
             player_id = tuple(data['data']['player_id'])
             self.otherplayers[player_id] = data['data']
         elif data['type'] == "map_data":
             self.map_response = data['data']
         elif data['type'] == "chat":
             print(f"Chat message received: {data['data']}")
-        print(f"Received message from server: {data}")
 
     def send_data(self, data: dict):
         json_data = json.dumps(data).encode('utf-8')
@@ -130,7 +127,6 @@ class GameServer:
                     data += chunk
                 if len(data) == length:
                     message = json.loads(data.decode('utf-8'))
-                    print(f"Received data from client: {message}")
                     if message['type'] == "socket" and message['data'] == "close":
                         self.handle_client_disconnect(client_socket)
                         return -1
@@ -155,7 +151,6 @@ class GameServer:
         length = struct.pack('<I', len(json_data))
         message = length + json_data
         clients_to_send = [c for c in self.clients if c != exclude]
-        print(f"Broadcasting {data} to {len(clients_to_send)} clients")
         for client in clients_to_send:
             try:
                 client.sendall(message)
